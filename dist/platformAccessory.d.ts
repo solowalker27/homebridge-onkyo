@@ -1,4 +1,4 @@
-import { CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
+import { PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
 import { OnkyoPlatform } from './platform';
 /**
  * Platform Accessory
@@ -8,13 +8,14 @@ import { OnkyoPlatform } from './platform';
 export declare class OnkyoPlatformAccessory {
     private readonly platform;
     private readonly accessory;
+    private readonly receiver;
     private service;
     /**
      * These are just used to create a working example
      * You should implement your own code to track the state of your accessory
      */
     private exampleStates;
-    constructor(platform: OnkyoPlatform, accessory: OnkyoPlatformAccessory);
+    constructor(platform: OnkyoPlatform, accessory: PlatformAccessory, receiver: JSON);
     /**
      * Handle "SET" requests from HomeKit
      * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.

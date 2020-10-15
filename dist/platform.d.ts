@@ -22,6 +22,6 @@ export declare class OnkyoPlatform implements DynamicPlatformPlugin {
      * Accessories must only be registered once, previously created accessories
      * must not be registered again to prevent "duplicate UUID" errors.
      */
-    discoverDevices(): void;
+    discoverDevices(receivers: any): void;
 }
 //# sourceMappingURL=platform.d.ts.map

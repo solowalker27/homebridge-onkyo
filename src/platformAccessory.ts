@@ -2,6 +2,8 @@ import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallb
 
 import { OnkyoPlatform } from './platform';
 
+// import { version } from '../package.json' ;
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -21,16 +23,17 @@ export class OnkyoPlatformAccessory {
 
   constructor(
     private readonly platform: OnkyoPlatform,
-    private readonly accessory: OnkyoPlatformAccessory,
+    private readonly accessory: PlatformAccessory,
+    private readonly receiver: JSON,
   ) {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, this.avrManufacturer)
-      .setCharacteristic(this.platform.Characteristic.Model, this.model)
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, this.avrSerial)
-      .setCharacteristic(this.platform.Characteristic.FirmwareRevision, info.version)
-      .setCharacteristic(this.platform.Characteristic.Name, this.name);
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, this.receiver['avrManufacturer'])
+      .setCharacteristic(this.platform.Characteristic.Model, this.receiver['model'])
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, this.receiver['avrSerial'])
+      // .setCharacteristic(this.platform.Characteristic.FirmwareRevision, version)
+      .setCharacteristic(this.platform.Characteristic.Name, this.receiver['name']);
   
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory

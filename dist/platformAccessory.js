@@ -1,15 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OnkyoPlatformAccessory = void 0;
+// import { version } from '../package.json' ;
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
 class OnkyoPlatformAccessory {
-    constructor(platform, accessory) {
+    constructor(platform, accessory, receiver) {
         this.platform = platform;
         this.accessory = accessory;
+        this.receiver = receiver;
         /**
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
@@ -20,11 +22,11 @@ class OnkyoPlatformAccessory {
         };
         // set accessory information
         this.accessory.getService(this.platform.Service.AccessoryInformation)
-            .setCharacteristic(this.platform.Characteristic.Manufacturer, this.avrManufacturer)
-            .setCharacteristic(this.platform.Characteristic.Model, this.model)
-            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.avrSerial)
-            .setCharacteristic(this.platform.Characteristic.FirmwareRevision, info.version)
-            .setCharacteristic(this.platform.Characteristic.Name, this.name);
+            .setCharacteristic(this.platform.Characteristic.Manufacturer, this.receiver['avrManufacturer'])
+            .setCharacteristic(this.platform.Characteristic.Model, this.receiver['model'])
+            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.receiver['avrSerial'])
+            // .setCharacteristic(this.platform.Characteristic.FirmwareRevision, version)
+            .setCharacteristic(this.platform.Characteristic.Name, this.receiver['name']);
         // get the LightBulb service if it exists, otherwise create a new LightBulb service
         // you can create multiple services for each accessory
         this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
