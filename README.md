@@ -1,104 +1,150 @@
-# homebridge-onkyo
-[![npm](https://img.shields.io/npm/dt/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
-[![npm](https://img.shields.io/npm/l/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
 
-[![NPM Version](https://img.shields.io/npm/v/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
-![Node.js CI](https://github.com/ToddGreenfield/homebridge-onkyo/workflows/Node.js%20CI/badge.svg?branch=master)
+<p align="center">
 
-Homebridge plugin for Onkyo Receivers
-Should work for all supported models as listed in the node_modules/eiscp/eiscp-commands.json. If your model is not listed, try TX-NR609.
+<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
 
-# Description
-
-This is an enhanced fork from the original/unmaintained homebridge-onkyo-avr plugin written by gw-wiscon.
-Existing users of my original fork or gw-wiscon's be sure to update the "platform" config to "Onkyo".
-
-# Changelog
-
-* Version 0.8.0 supports more models with a newer version of eiscp.js. Also includes bug and performance fixes.
-* Version 0.7.5 introduces linter check for JSON files and code quality check using xo. Developers can now use "npm test" before submitting a pull request.
-* Version 0.7 iOS 12.2+ is now required. This is now a Platform, theoretically supporting multiple receivers. Each receiver is a TV accessory (which is why iOS 12.2+ is required). Input labels can customized with `inputs` in the config. An optional Dimmer service for separate volume control is available, useful for non-iPhone control and more advanced automations (it appears as a dimmable light bulb). To disable the volume dimmer, add `"volume_dimmer": false` to your receiver in config.
-* Version 0.6 includes support for zone2. Adds a new config parameter called "zone" and use "zone2". Thanks for the contrib mbbeaubi.
-* Version 0.5.x includes support for input-selector. Available inputs are dynamically pulled from the eiscp-commands.json file. Note: Not all inputs may work with your receiver.
-* Version 0.4.x includes support for volume, mute, and has options for setting default_input.
-
-For Siri Control of Volume, Mute, and Input - Use an app like EVE which has control sliders and create scenes for "Volume Mute" or "Volume Unmute", and/or various volume level scenes like "Volume Low" or "Volume Loud", or for inputs like "input network" or "input fm". It may be easiest to set the volume or Input first using the OnkyoRemote3 app and then creating the scenes so the volume or input is pre-set (without using the slider).
-
-For Alexa Control of Volume, Mute, Input - (if using the Alexa plugin) - create DummySwitches (homebridge-dummy) and setup an automation to run the scene created from above. "Alexa, turn on Volume Loud."
-
-# To Do
-
-Auto discovery of all receivers on the network (if more than one exist) and other flexibility.
-Adding Speaker A/B on/off control
-Others...
-
-# Installation
-
-As a prerequisite ensure that the Onkyo receiver is controllable using the OnkyoRemote3 iOS app.
-You also need to have [git](https://github.com/git/git) installed.
-
-It is recommended to install and configure this plugin using [homebridge-config-ui-x](https://github.com/oznu/homebridge-config-ui-x#readme), however you can also install manually using the following manual tasks:
-
-1. Install homebridge using: npm install -g homebridge
-2. Install this plugin using: npm install -g homebridge-onkyo
-3. Update your configuration file. See the sample below.
-
-# Configuration
-
-Example accessory config (needs to be added to the homebridge config.json):
- ```
-"platforms": [{
-        "platform": "Onkyo",
-        "receivers": [
-            {
-                "model": "TX-NR609",
-                "ip_address": "10.0.0.46",
-                "poll_status_interval": "3000",
-                "name": "Receiver",
-                "zone": "main",
-                "default_input": "net",
-                "default_volume": "10",
-                "max_volume": "40",
-                "map_volume_100": false,
-                "inputs": [
-                    {"input_name": "dvd", "display_name": "Blu-ray"},
-                    {"input_name": "video2", "display_name": "Switch"},
-                    {"input_name": "video3", "display_name": "Wii U"},
-                    {"input_name": "video6", "display_name": "Apple TV"},
-                    {"input_name": "video4", "display_name": "AUX"},
-                    {"input_name": "cd", "display_name": "TV/CD"}
-                ],
-                "volume_dimmer": false,
-                "switch_service": false,
-                "filter_inputs": true
-            }
-        ]
-    }]
- ```
-### Config Explanation:
-
-Field           			| Description
-----------------------------|------------
-**platform**   			| (required) Must always be "Onkyo".
-**receivers**               | (required) List of receiver accessories to create. Must contain at least 1.
-Receiver Attributes         |
-----------------------------|------------
-**name**					| (required) The name you want to use for control of the Onkyo accessories.
-**ip_address**  			| (required) The internal ip address of your Onkyo.
-**model**					| (required) Must be a valid model listed in config.schema.json file. If your model is not listed, you can use the TX-NR609 if your model supports the Integra Serial Communication Protocol (ISCP).
-**poll_status_interval**  	| (optional) Poll Status Interval. Defaults to 0 or no polling.
-**default_input**  			| (optional) A valid source input. Default will use last known input. See output of 3.js in eiscp/examples for options.
-**default_volume**  		| (optional) Initial receiver volume upon powerup. This is the true volume number, not a percentage. Ignored if powerup from device knob or external app (like OnkyoRemote3).
-**max_volume**  			| (optional) Receiver volume max setting. This is a true volume number, not a percentage, and intended so there is not accidental setting of volume to 80. Ignored by external apps (like OnkyoRemote3). Defaults to 30.
-**map_volume_100**  		| (optional) Will remap the volume percentages that appear in the Home app so that the configured max_volume will appear as 100% in the Home app. For example, if the max_volume is 30, then setting the volume slider to 50% would set the receiver's actual volume to 15. Adjusting the stereo volume knob to 35 will appear as 100% in the Home app. This option could confuse some users to it defaults to off false, but it does give the user finer volume control especially when sliding volume up and down in the Home app. Defaults to False.
-**zone**              		| (optional) Defaults to main. Optionally control zone2 where supported.
-**inputs**					| (optional) List of inputs you want populated for the TV service and what you want them to be displayed as.
-**filter_inputs**                   | (optional) Boolean value. Setting this to `true` limits inputs displayed in HomeKit to those you provide in `inputs`. If `false` or not defined, all inputs supported by `model` will be displayed.
-**volume_dimmer**					| (optional) Boolean value. Setting this to `false` disables additional Dimmer accessory for separate volume control.
+</p>
 
 
-# Troubleshooting
+# Homebridge Platform Plugin Template
 
-For Troubleshooting look in the homebridge-onkyo/node_modules/eiscp/examples directory and see if you can run 3.js. "node 3.js". It should output all available commands.
+This is a template Homebridge platform plugin and can be used as a base to help you get started developing your own plugin.
 
-You can find the output also in the [wiki](https://github.com/ToddGreenfield/homebridge-onkyo/wiki/EISCP-output-of-3.js).
+This template should be use in conjunction with the [developer documentation](https://developers.homebridge.io/). A full list of all supported service types, and their characteristics is available on this site.
+
+## Clone As Template
+
+Click the link below to create a new GitHub Repository using this template, or click the *Use This Template* button above.
+
+<span align="center">
+
+### [Create New Repository From Template](https://github.com/homebridge/homebridge-plugin-template/generate)
+
+</span>
+
+## Setup Development Environment
+
+To develop Homebridge plugins you must have Node.js 12 or later installed, and a modern code editor such as [VS Code](https://code.visualstudio.com/). This plugin template uses [TypeScript](https://www.typescriptlang.org/) to make development easier and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
+
+* [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+
+## Install Development Dependencies
+
+Using a terminal, navigate to the project folder and run this command to install the development dependencies:
+
+```
+npm install
+```
+
+## Update package.json
+
+Open the [`package.json`](./package.json) and change the following attributes:
+
+* `name` - this should be prefixed with `homebridge-` or `@username/homebridge-` and contain no spaces or special characters apart from a dashes
+* `displayName` - this is the "nice" name displayed in the Homebridge UI
+* `repository.url` - Link to your GitHub repo
+* `bugs.url` - Link to your GitHub repo issues page
+
+When you are ready to publish the plugin you should set `private` to false, or remove the attribute entirely.
+
+## Update Plugin Defaults
+
+Open the [`src/settings.ts`](./src/settings.ts) file and change the default values:
+
+* `PLATFORM_NAME` - Set this to be the name of your platform. This is the name of the platform that users will use to register the plugin in the Homebridge `config.json`.
+* `PLUGIN_NAME` - Set this to be the same name you set in the [`package.json`](./package.json) file. 
+
+Open the [`config.schema.json`](./config.schema.json) file and change the following attribute:
+
+* `pluginAlias` - set this to match the `PLATFORM_NAME` you defined in the previous step.
+
+## Build Plugin
+
+TypeScript needs to be compiled into JavaScript before it can run. The following command will compile the contents of your [`src`](./src) directory and put the resulting code into the `dist` folder.
+
+```
+npm run build
+```
+
+## Link To Homebridge
+
+Run this command so your global install of Homebridge can discover the plugin in your development environment:
+
+```
+npm link
+```
+
+You can now start Homebridge, use the `-D` flag so you can see debug log messages in your plugin:
+
+```
+homebridge -D
+```
+
+## Watch For Changes and Build Automatically
+
+If you want to have your code compile automatically as you make changes, and restart Homebridge automatically between changes you can run:
+
+```
+npm run watch
+```
+
+This will launch an instance of Homebridge in debug mode which will restart every time you make a change to the source code. It will load the config stored in the default location under `~/.homebridge`. You may need to stop other running instances of Homebridge while using this command to prevent conflicts. You can adjust the Homebridge startup command in the [`nodemon.json`](./nodemon.json) file.
+
+## Customise Plugin
+
+You can now start customising the plugin template to suit your requirements.
+
+* [`src/platform.ts`](./src/platform.ts) - this is where your device setup and discovery should go.
+* [`src/platformAccessory.ts`](./src/platformAccessory.ts) - this is where your accessory control logic should go, you can rename or create multiple instances of this file for each accessory type you need to implement as part of your platform plugin. You can refer to the [developer documentation](https://developers.homebridge.io/) to see what characteristics you need to implement for each service type.
+* [`config.schema.json`](./config.schema.json) - update the config schema to match the config you expect from the user. See the [Plugin Config Schema Documentation](https://developers.homebridge.io/#/config-schema).
+
+## Versioning Your Plugin
+
+Given a version number `MAJOR`.`MINOR`.`PATCH`, such as `1.4.3`, increment the:
+
+1. **MAJOR** version when you make breaking changes to your plugin,
+2. **MINOR** version when you add functionality in a backwards compatible manner, and
+3. **PATCH** version when you make backwards compatible bug fixes.
+
+You can use the `npm version` command to help you with this:
+
+```bash
+# major update / breaking changes
+npm version major
+
+# minor update / new features
+npm version update
+
+# patch / bugfixes
+npm version patch
+```
+
+## Publish Package
+
+When you are ready to publish your plugin to [npm](https://www.npmjs.com/), make sure you have removed the `private` attribute from the [`package.json`](./package.json) file then run:
+
+```
+npm publish
+```
+
+If you are publishing a scoped plugin, i.e. `@username/homebridge-xxx` you will need to add `--access=public` to command the first time you publish.
+
+#### Publishing Beta Versions
+
+You can publish *beta* versions of your plugin for other users to test before you release it to everyone.
+
+```bash
+# create a new pre-release version (eg. 2.1.0-beta.1)
+npm version prepatch --preid beta
+
+# publsh to @beta
+npm publish --tag=beta
+```
+
+Users can then install the  *beta* version by appending `@beta` to the install command, for example:
+
+```
+sudo npm install -g homebridge-example-plugin@beta
+```
+
+
