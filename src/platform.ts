@@ -1,4 +1,4 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import { API, DynamicPlatformPlugin, Logger, Categories, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { OnkyoPlatformAccessory } from './platformAccessory';
@@ -51,21 +51,7 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
    */
   discoverDevices(receivers) {
 
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    // const exampleDevices = [
-    //   {
-    //     exampleUniqueId: 'ABCD',
-    //     exampleDisplayName: 'Bedroom',
-    //   },
-    //   {
-    //     exampleUniqueId: 'EFGH',
-    //     exampleDisplayName: 'Kitchen',
-    //   },
-    // ];
-
-    // loop over the discovered devices and register each one if it has not already been registered
+    // loop over the defined receivers and register each one if it has not already been registered
     for (const receiver of receivers) {
 
       // generate a unique id for the accessory this should be generated from
@@ -80,15 +66,15 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
       if (existingAccessory) {
         // the accessory already exists
         if (receiver) {
-          this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+          this.log.info('Restoring existing Onkyo receiver accessory from cache:', existingAccessory.context.device['name']);
 
           // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-          // existingAccessory.context.device = device;
+          existingAccessory.context.device = receiver;
           // this.api.updatePlatformAccessories([existingAccessory]);
 
           // create the accessory handler for the restored accessory
           // this is imported from `platformAccessory.ts`
-          new OnkyoPlatformAccessory(this, existingAccessory, receiver);
+          new OnkyoPlatformAccessory(this, existingAccessory);
           
           // update accessory cache with any changes to the accessory details and information
           this.api.updatePlatformAccessories([existingAccessory]);
@@ -96,14 +82,14 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
           // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
           // remove platform accessories when no longer present
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-          this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+          this.log.info('Removing existing Onkyo receiver accessory from cache:', existingAccessory.context.device['name']);
         }
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', receiver['name']);
+        this.log.info('Adding new Onkyo receiver accessory:', receiver['name']);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(receiver['name'], uuid);
+        const accessory = new this.api.platformAccessory(receiver['name'], uuid, Categories.AUDIO_RECEIVER);
 
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
@@ -111,7 +97,7 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new OnkyoPlatformAccessory(this, accessory, receiver);
+        new OnkyoPlatformAccessory(this, accessory);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);

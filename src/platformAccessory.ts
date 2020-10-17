@@ -1,8 +1,6 @@
-import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
+import { API, Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback, Perms} from 'homebridge';
 
 import { OnkyoPlatform } from './platform';
-
-// import { version } from '../package.json' ;
 
 /**
  * Platform Accessory
@@ -16,48 +14,104 @@ export class OnkyoPlatformAccessory {
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
    */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
+  private receiverStates = {
+    Power: false,
+    Mute: false,
+    Volume: 0,
+    Input: null
   };
+  private eiscp = require('eiscp');
+  private info = require('../package.json');
+  private RxInputs = {};
+  private cmdMap = {
+    main: {
+      power: 'system-power',
+      volume: 'master-volume',
+      muting: 'audio-muting',
+      input: 'input-selector'
+    },
+    zone2: {
+      power: 'power',
+      volume: 'volume',
+      muting: 'muting',
+      input: 'selector'
+    }
+  };
+  private zone: string;
+  private model: string;
+  private ip_address: string;
 
   constructor(
     private readonly platform: OnkyoPlatform,
-    private readonly accessory: PlatformAccessory,
-    private readonly receiver: JSON,
+    private readonly accessory: PlatformAccessory
   ) {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, this.receiver['avrManufacturer'])
-      .setCharacteristic(this.platform.Characteristic.Model, this.receiver['model'])
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, this.receiver['avrSerial'])
-      // .setCharacteristic(this.platform.Characteristic.FirmwareRevision, version)
-      .setCharacteristic(this.platform.Characteristic.Name, this.receiver['name']);
-  
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
-    // you can create multiple services for each accessory
+                  .setCharacteristic(this.platform.Characteristic.Manufacturer, accessory.context.device['avrManufacturer'])
+                  .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device['model'])
+                  .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device['avrSerial'])
+                  .setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.info.version)
+                  .setCharacteristic(this.platform.Characteristic.Name, accessory.context.device['name'])
+                  .setCharacteristic(this.platform.Characteristic.ConfiguredName, accessory.context.device['name']);
 
+    // Get/create then set up Television service
+    const tvService = this.accessory.getService(this.platform.Service.Television) || this.accessory.addService(this.platform.Service.Television);
+    tvService.getCharacteristic(this.platform.Characteristic.Name)
+             .setValue(accessory.context.device['name'])
+             .setProps({
+              perms: [Perms.PAIRED_READ]
+             });
+		tvService.setCharacteristic(this.platform.Characteristic.SleepDiscoveryMode, this.platform.Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
+		tvService.getCharacteristic(this.platform.Characteristic.Active)
+			       .on('get', this.getPowerState.bind(this))
+			       .on('set', this.setPowerState.bind(this));
 
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+		tvService.getCharacteristic(this.platform.Characteristic.ActiveIdentifier)
+			       .on('set', this.setInputSource.bind(this))
+			       .on('get', this.getInputSource.bind(this));
+		tvService.getCharacteristic(this.platform.Characteristic.RemoteKey)
+			       .on('set', this.remoteKeyPress.bind(this));
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+    
+    
+    // Get/create then set up TelevisionSpeaker service
+    const tvSpeakerService = this.accessory.getService(this.platform.Service.TelevisionSpeaker) || this.accessory.addService(this.platform.Service.TelevisionSpeaker);
+    tvSpeakerService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device['name'] + ' Volume');
+		tvSpeakerService.setCharacteristic(this.platform.Characteristic.Active, this.platform.Characteristic.Active.ACTIVE)
+			              .setCharacteristic(this.platform.Characteristic.VolumeControlType, this.platform.Characteristic.VolumeControlType.ABSOLUTE);
+		tvSpeakerService.getCharacteristic(this.platform.Characteristic.VolumeSelector)
+			              .on('set', this.setVolumeRelative.bind(this));
+		tvSpeakerService.getCharacteristic(this.platform.Characteristic.Mute)
+			              .on('get', this.getMuteState.bind(this))
+			              .on('set', this.setMuteState.bind(this));
+		tvSpeakerService.addCharacteristic(this.platform.Characteristic['volume'])
+			              .on('get', this.getVolumeState.bind(this))
+                    .on('set', this.setVolumeState.bind(this));
 
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
+    this.createRxInput();
 
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .on('set', this.setOn.bind(this))                // SET - bind to the `setOn` method below
-      .on('get', this.getOn.bind(this));               // GET - bind to the `getOn` method below
+    // Convenience variables
+    this.model = this.accessory.context.device['model'];
+    this.zone = this.accessory.context.device['zone'];
+    this.ip_address = this.accessory.context.device['ip_address'];
 
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .on('set', this.setBrightness.bind(this));       // SET - bind to the 'setBrightness` method below
+    this.eiscp.on('debug', this.eventDebug.bind(this));
+		this.eiscp.on('error', this.eventError.bind(this));
+		this.eiscp.on('connect', this.eventConnect.bind(this));
+		this.eiscp.on('close', this.eventClose.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone]['power'], this.eventSystemPower.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone]['volume'], this.eventVolume.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone]['muting'], this.eventAudioMuting.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone]['input'], this.eventInput.bind(this));
 
+    this.eiscp.connect(
+			{host: this.ip_address, reconnect: true, model: this.model}
+    );
 
+    
     /**
      * Creating multiple services of the same type.
      * 
@@ -98,6 +152,60 @@ export class OnkyoPlatformAccessory {
       this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
     }, 10000);
   }
+
+  createRxInput() {
+    // Create the RxInput object for later use.
+      const eiscpDataAll = require('eiscp/eiscp-commands.json');
+      const inSets: Array<String> = [];
+      let inputSet;
+  /* eslint guard-for-in: "off" */
+      for (const modelset in eiscpDataAll.modelsets) {
+        eiscpDataAll.modelsets[modelset].forEach(model => {
+          if (model.includes(this.accessory.context.device['model']))
+            inSets.push(modelset);
+        });
+      }
+  
+      // Get list of commands from eiscpData
+      const eiscpData: JSON = eiscpDataAll.commands.main.SLI.values;
+      // Create a JSON object for inputs from the eiscpData
+      let newobj = '{ "Inputs" : [';
+      let exkey;
+      for (exkey in eiscpData) {
+        let hold = eiscpData[exkey].name.toString();
+        if (hold.includes(','))
+          hold = hold.substring(0, hold.indexOf(','));
+        if (exkey.includes('“') || exkey.includes('“')) {
+          exkey = exkey.replace(/\“/g, ''); // eslint-disable-line no-useless-escape
+          exkey = exkey.replace(/\”/g, ''); // eslint-disable-line no-useless-escape
+        }
+  
+        if (exkey.includes('UP') || exkey.includes('DOWN') || exkey.includes('QSTN'))
+          continue;
+  
+        // Work around specific bug for “26”
+        if (exkey === '“26”')
+          exkey = '26';
+  
+        if (exkey in eiscpData) {
+          if ('models' in eiscpData[exkey])
+            inputSet = eiscpData[exkey].models;
+          else
+            continue;
+        } else {
+          continue;
+        }
+  
+        if (inSets.includes(inputSet))
+          newobj = newobj + '{ "code":"' + exkey + '" , "label":"' + hold + '" },';
+        else
+          continue;
+      }
+  
+      // Drop last comma first
+      newobj = newobj.slice(0, -1) + ']}';
+      this.RxInputs = JSON.parse(newobj);
+    }      
 
   /**
    * Handle "SET" requests from HomeKit
