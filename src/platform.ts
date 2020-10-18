@@ -57,7 +57,7 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      const uuid = this.api.hap.uuid.generate(receiver['name']);
+      const uuid = this.api.hap.uuid.generate(receiver['serial'] || (receiver['name'] + receiver['ip_address']));
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above

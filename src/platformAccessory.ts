@@ -116,17 +116,17 @@ export class OnkyoPlatformAccessory {
 
     // Convenience variables
     this.model = this.accessory.context.device['model'];
-    this.zone = this.accessory.context.device['zone'];
+    this.zone = this.accessory.context.device['zone'] || 'main';
     this.ip_address = this.accessory.context.device['ip_address'];
 
     this.eiscp.on('debug', this.eventDebug.bind(this));
 		this.eiscp.on('error', this.eventError.bind(this));
 		this.eiscp.on('connect', this.eventConnect.bind(this));
-		this.eiscp.on('close', this.eventClose.bind(this));
-		this.eiscp.on(this.cmdMap[this.zone]['power'], this.eventSystemPower.bind(this));
-		this.eiscp.on(this.cmdMap[this.zone]['volume'], this.eventVolume.bind(this));
-		this.eiscp.on(this.cmdMap[this.zone]['muting'], this.eventAudioMuting.bind(this));
-		this.eiscp.on(this.cmdMap[this.zone]['input'], this.eventInput.bind(this));
+    this.eiscp.on('close', this.eventClose.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone].power, this.eventSystemPower.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone].volume, this.eventVolume.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone].muting, this.eventAudioMuting.bind(this));
+		this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
 
     this.eiscp.connect(
 			{host: this.ip_address, reconnect: true, model: this.model}
