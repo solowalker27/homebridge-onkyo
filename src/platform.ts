@@ -74,7 +74,7 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
 
           // create the accessory handler for the restored accessory
           // this is imported from `platformAccessory.ts`
-          new OnkyoPlatformAccessory(this, existingAccessory);
+          new OnkyoPlatformAccessory(this, existingAccessory, this.log);
           
           // update accessory cache with any changes to the accessory details and information
           this.api.updatePlatformAccessories([existingAccessory]);
@@ -97,7 +97,7 @@ export class OnkyoPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new OnkyoPlatformAccessory(this, accessory);
+        new OnkyoPlatformAccessory(this, accessory, this.log);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
