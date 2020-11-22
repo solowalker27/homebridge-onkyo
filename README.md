@@ -15,6 +15,7 @@ Existing users of my original fork or gw-wiscon's be sure to update the "platfor
 
 # Changelog
 
+* Version 0.8.0 supports more models with a newer version of eiscp.js. Also includes bug and performance fixes.
 * Version 0.7.5 introduces linter check for JSON files and code quality check using xo. Developers can now use "npm test" before submitting a pull request.
 * Version 0.7 iOS 12.2+ is now required. This is now a Platform, theoretically supporting multiple receivers. Each receiver is a TV accessory (which is why iOS 12.2+ is required). Input labels can customized with `inputs` in the config. An optional Dimmer service for separate volume control is available, useful for non-iPhone control and more advanced automations (it appears as a dimmable light bulb). To disable the volume dimmer, add `"volume_dimmer": false` to your receiver in config.
 * Version 0.6 includes support for zone2. Adds a new config parameter called "zone" and use "zone2". Thanks for the contrib mbbeaubi.
@@ -58,17 +59,15 @@ Example accessory config (needs to be added to the homebridge config.json):
                 "default_input": "net",
                 "default_volume": "10",
                 "max_volume": "40",
-                "inputs": [
-                    {
-                        "input_name": "TV",
-                        "display_name": "TV"
-                    },
-                    {
-                        "input_name": "AUX",
-                        "display_name": "PS4"
-                    }
-                ]
                 "map_volume_100": false,
+                "inputs": [
+                    {"input_name": "dvd", "display_name": "Blu-ray"},
+                    {"input_name": "video2", "display_name": "Switch"},
+                    {"input_name": "video3", "display_name": "Wii U"},
+                    {"input_name": "video6", "display_name": "Apple TV"},
+                    {"input_name": "video4", "display_name": "AUX"},
+                    {"input_name": "cd", "display_name": "TV/CD"}
+                ],
                 "volume_dimmer": false,
                 "switch_service": false,
                 "filter_inputs": true
@@ -86,14 +85,14 @@ Receiver Attributes         |
 ----------------------------|------------
 **name**					| (required) The name you want to use for control of the Onkyo accessories.
 **ip_address**  			| (required) The internal ip address of your Onkyo.
-**model**					| (required) Must be a valid model listed in node_modules/eiscp/eiscp-commands.json file. If your model is not listed, you can use the TX-NR609 if your model supports the Integra Serial Communication Protocol (ISCP).
+**model**					| (required) Must be a valid model listed in config.schema.json file. If your model is not listed, you can use the TX-NR609 if your model supports the Integra Serial Communication Protocol (ISCP).
 **poll_status_interval**  	| (optional) Poll Status Interval. Defaults to 0 or no polling.
 **default_input**  			| (optional) A valid source input. Default will use last known input. See output of 3.js in eiscp/examples for options.
 **default_volume**  		| (optional) Initial receiver volume upon powerup. This is the true volume number, not a percentage. Ignored if powerup from device knob or external app (like OnkyoRemote3).
 **max_volume**  			| (optional) Receiver volume max setting. This is a true volume number, not a percentage, and intended so there is not accidental setting of volume to 80. Ignored by external apps (like OnkyoRemote3). Defaults to 30.
 **map_volume_100**  		| (optional) Will remap the volume percentages that appear in the Home app so that the configured max_volume will appear as 100% in the Home app. For example, if the max_volume is 30, then setting the volume slider to 50% would set the receiver's actual volume to 15. Adjusting the stereo volume knob to 35 will appear as 100% in the Home app. This option could confuse some users to it defaults to off false, but it does give the user finer volume control especially when sliding volume up and down in the Home app. Defaults to False.
 **zone**              		| (optional) Defaults to main. Optionally control zone2 where supported.
-**inputs**					| (optional) List of inputs you want populated for the TV service and what you want them to be labeled. Inputs not listed are omitted.
+**inputs**					| (optional) List of inputs you want populated for the TV service and what you want them to be displayed as.
 **filter_inputs**                   | (optional) Boolean value. Setting this to `true` limits inputs displayed in HomeKit to those you provide in `inputs`. If `false` or not defined, all inputs supported by `model` will be displayed.
 **volume_dimmer**					| (optional) Boolean value. Setting this to `false` disables additional Dimmer accessory for separate volume control.
 

@@ -2,15 +2,9 @@
 
 let Service;
 let Characteristic;
-// let Accessory;
 let RxInputs;
 const pollingtoevent = require('polling-to-event');
-
-// const accessories = [];
 const info = require('./package.json');
-
-// Are we actually using rx-types.js anywhere?
-// const RxTypes = require('./rx-types.js');
 
 class OnkyoPlatform {
 	constructor(log, config, api) {
@@ -85,29 +79,7 @@ class OnkyoAccessory {
 			this.log.debug('filter_inputs: %s', this.filter_inputs);
 		}
 
-		//
-		// 		this.inputs = this.config.inputs;
-		//
-		/* eslint no-return-assign: "warn" */
-
-		const array_input = {};
-				if (typeof this.config.inputs === undefined) {
-					this.log.warn('There are no INPUTS configured in the configuration. This is OK if you have "filter_inputs" disabled.');
-					this.filter_inputs = false;
-					this.log.debug('Disabled filtering INPUTS.');
-				} else if (typeof this.config.inputs === 'object') {
-					this.log.debug('Configuration contains an INPUTS object.');
-					this.config.inputs.forEach(x => array_input[x.input_name] = x.display_name);
-					// results in: inputs: { TV: 'TV', AUX: 'PS4' }
-					this.inputs = array_input;
-					this.log.debug('This is the list of INPUTS after converting from an object into an array: %s', this.inputs);
-				} else {
-					this.log.warn('Configuration does not contain proper INPUTS configuration.');
-					this.log('Continuing without INPUTS filter option.');
-					this.filter_inputs = false;
-				}
-
-			this.log.debug('Input filtering is finally %s', this.filter_inputs);
+		this.inputs = this.config.inputs;
 
 		this.cmdMap = new Array(2);
 		this.cmdMap.main = new Array(4);
@@ -198,38 +170,47 @@ class OnkyoAccessory {
 
 	createRxInput() {
 	// Create the RxInput object for later use.
-		let eiscpData = require('./node_modules/eiscp/eiscp-commands.json');
+		const eiscpDataAll = require('eiscp/eiscp-commands.json');
 		const inSets = [];
-
-/* eslint guard-for-in: "off" */
 		let set;
-
-		for (set in eiscpData.modelsets) {
-			eiscpData.modelsets[set].forEach(model => {
+/* eslint guard-for-in: "off" */
+		for (set in eiscpDataAll.modelsets) {
+			eiscpDataAll.modelsets[set].forEach(model => {
 				if (model.includes(this.model))
 					inSets.push(set);
 			});
 		}
 
-		eiscpData = eiscpData.commands.main.SLI.values;
-
+		// Get list of commands from eiscpData
+		const eiscpData = eiscpDataAll.commands.main.SLI.values;
+		// Create a JSON object for inputs from the eiscpData
 		let newobj = '{ "Inputs" : [';
 		let exkey;
 		for (exkey in eiscpData) {
 			let hold = eiscpData[exkey].name.toString();
 			if (hold.includes(','))
 				hold = hold.substring(0, hold.indexOf(','));
-
 			if (exkey.includes('“') || exkey.includes('“')) {
-				/* eslint no-useless-escape: "warn" */
-				exkey = exkey.replace(/\“/g, '');
-				exkey = exkey.replace(/\”/g, '');
+				exkey = exkey.replace(/\“/g, ''); // eslint-disable-line no-useless-escape
+				exkey = exkey.replace(/\”/g, ''); // eslint-disable-line no-useless-escape
 			}
 
 			if (exkey.includes('UP') || exkey.includes('DOWN') || exkey.includes('QSTN'))
 				continue;
 
-			set = eiscpData[exkey].models;
+			// Work around specific bug for “26”
+			if (exkey === '“26”')
+				exkey = '26';
+
+			if (exkey in eiscpData) {
+				if ('models' in eiscpData[exkey])
+					set = eiscpData[exkey].models;
+				else
+					continue;
+			} else {
+				continue;
+			}
+
 			if (inSets.includes(set))
 				newobj = newobj + '{ "code":"' + exkey + '" , "label":"' + hold + '" },';
 			else
@@ -239,34 +220,6 @@ class OnkyoAccessory {
 		// Drop last comma first
 		newobj = newobj.slice(0, -1) + ']}';
 		RxInputs = JSON.parse(newobj);
-		if (this.filter_inputs) {
-			let length = RxInputs.Inputs.length;
-			while (length--) {
-				if (this.inputs[RxInputs.Inputs[length].label])
-					continue;
-				else
-					RxInputs.Inputs.splice(length, 1);
-			}
-		}
-		// Deduplicate any input entries.
-		// Is this necessary?
-		// var tempRxInputs = JSON.parse(newobj);
-		// var deduped = [];
-		// tempRxInputs['Inputs'].forEach((input, index) => {
-		// 	var dupe = false;
-		// 	deduped.forEach((input2, index2) => {
-		// 		if (input2 == input) {
-		// 			dupe = true;
-		// 			return
-		// 		}
-		// 	})
-		// 	if (!dupe) {
-		// 		deduped.push(input);
-		// 	}
-		// })
-		// tempRxInputs.Inputs = deduped;
-		// RxInputs = tempRxInputs;
-		// this.log.info(tempRxInputs);
 	}
 
 	polling(platform) {
@@ -366,9 +319,8 @@ class OnkyoAccessory {
 		this.state = (response === 'on');
 		this.log.debug('eventSystemPower - message: %s, new state %s', response, this.state);
 		// Communicate status
-		// if (this.tvService ) {
-		// 	this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.state, null, 'statuspoll');
-		// }
+		if (this.tvService)
+			this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.state);
 		// if (this.volume_dimmer) {
 		// 	this.m_state = !(response == 'on');
 		// 	this.dimmer.getCharacteristic(Characteristic.On).updateValue((response == 'on'), null, 'power event m_status');
@@ -386,14 +338,13 @@ class OnkyoAccessory {
 	eventInput(response) {
 		if (response) {
 			let input = JSON.stringify(response);
-			input = input.replace(/[\[\]"]+/g, '');
+			input = input.replace(/[\[\]"]+/g, ''); // eslint-disable-line no-useless-escape
 			if (input.includes(','))
 				input = input.substring(0, input.indexOf(','));
 
 			// Convert to i_state input code
-			/* eslint no-negated-condition: "warn" */
 			const index =
-				input !== null ?
+				input !== null ? // eslint-disable-line no-negated-condition
 				RxInputs.Inputs.findIndex(i => i.label === input) :
 				-1;
 			if (this.i_state !== (index + 1))
@@ -408,7 +359,9 @@ class OnkyoAccessory {
 			this.log.error('eventInput - ERROR - INVALID INPUT - Model does not support selected input.');
 		}
 
-		this.getInputSource.bind(this);
+		// Communicate status
+		if (this.tvService)
+			this.tvService.getCharacteristic(Characteristic.ActiveIdentifier).updateValue(this.i_state);
 	}
 
 	eventVolume(response) {
@@ -436,7 +389,7 @@ class OnkyoAccessory {
 	// GET AND SET FUNCTIONS
 	/// /////////////////////
 	setPowerState(powerOn, callback, context) {
-	// if context is statuspoll, then we need to ensure this we do not set the actual value
+	// if context is statuspoll, then we need to ensure that we do not set the actual value
 		if (context && context === 'statuspoll') {
 			this.log.debug('setPowerState - polling mode, ignore, state: %s', this.state);
 			callback(null, this.state);
@@ -457,7 +410,7 @@ class OnkyoAccessory {
 		callback(null, this.state);
 		if (powerOn) {
 			this.log.debug('setPowerState - actual mode, power state: %s, switching to ON', this.state);
-			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].power + '=on', (error, response) => {
+			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].power + '=on', (error, _) => {
 				// this.log.debug( 'PWR ON: %s - %s -- current state: %s', error, response, this.state);
 				if (error) {
 					this.state = false;
@@ -470,7 +423,7 @@ class OnkyoAccessory {
 						this.log.debug('Attempting to set the default volume to ' + this.defaultVolume);
 						if (powerOn && this.defaultVolume) {
 							this.log.info('Setting default volume to ' + this.defaultVolume);
-							this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':' + this.defaultVolume, function (error, response) {
+							this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':' + this.defaultVolume, function (error, _) {
 								if (error)
 									this.log.error('Error while setting default volume: %s', error);
 							});
@@ -482,21 +435,23 @@ class OnkyoAccessory {
 						// Handle defaultInput being either a custom label or manufacturer label
 						let label = this.defaultInput;
 						if (this.inputs) {
-							for (const id in this.inputs) {
-								if (this.inputs[id] === this.defaultInput)
-									label = id;
-							}
+							this.inputs.forEach((input, _) => {
+								if (input.input_name === this.default)
+									label = input.input_name;
+								else if (input.display_name === this.defaultInput)
+									label = input.display_name;
+							});
 						}
 
 						const index =
-							label !== null ?
+							label !== null ? // eslint-disable-line no-negated-condition
 							RxInputs.Inputs.findIndex(i => i.label === label) :
 							-1;
 						this.i_state = index + 1;
 
 						if (powerOn && label) {
 							this.log.info('Setting default input selector to ' + label);
-							this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].input + '=' + label, function (error, response) {
+							this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].input + '=' + label, function (error, _) {
 								if (error)
 									this.log.error('Error while setting default input: %s', error);
 							});
@@ -505,7 +460,7 @@ class OnkyoAccessory {
 			});
 		} else {
 			this.log.debug('setPowerState - actual mode, power state: %s, switching to OFF', this.state);
-			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].power + '=standby', (error, response) => {
+			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].power + '=standby', (error, _) => {
 				// this.log.debug( 'PWR OFF: %s - %s -- current state: %s', error, response, this.state);
 				if (error) {
 					this.state = false;
@@ -521,7 +476,7 @@ class OnkyoAccessory {
 		// 	this.m_state = !(powerOn == 'on');
 		// 	this.dimmer.getCharacteristic(Characteristic.On).updateValue((powerOn == 'on'), null, 'power event m_status');
 		// }
-		// this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.state, null, 'statuspoll');
+		this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.state);
 	}
 
 	getPowerState(callback, context) {
@@ -544,13 +499,13 @@ class OnkyoAccessory {
 		// have the event later on execute changes
 		callback(null, this.state);
 		this.log.debug('getPowerState - actual mode, return state: ', this.state);
-		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].power + '=query', (error, data) => {
+		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].power + '=query', (error, _) => {
 			if (error) {
 				this.state = false;
 				this.log.debug('getPowerState - PWR QRY: ERROR - current state: %s', this.state);
 			}
 		});
-		// this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.state);
+		this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.state);
 	}
 
 	getVolumeState(callback, context) {
@@ -573,12 +528,16 @@ class OnkyoAccessory {
 		// have the event later on execute changes
 		callback(null, this.v_state);
 		this.log.debug('getVolumeState - actual mode, return v_state: ', this.v_state);
-		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + '=query', (error, data) => {
+		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + '=query', (error, _) => {
 			if (error) {
 				this.v_state = 0;
 				this.log.debug('getVolumeState - VOLUME QRY: ERROR - current v_state: %s', this.v_state);
 			}
 		});
+
+		// Communicate status
+		if (this.tvService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Volume).updateValue(this.v_state);
 	}
 
 	setVolumeState(volumeLvl, callback, context) {
@@ -617,12 +576,16 @@ class OnkyoAccessory {
 		// have the event later on execute changes
 		callback(null, this.v_state);
 
-		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':' + this.v_state, (error, response) => {
+		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':' + this.v_state, (error, _) => {
 			if (error) {
 				this.v_state = 0;
 				this.log.debug('setVolumeState - VOLUME : ERROR - current v_state: %s', this.v_state);
 			}
 		});
+
+		// Communicate status
+		if (this.tvService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Volume).updateValue(this.v_state);
 	}
 
 	setVolumeRelative(volumeDirection, callback, context) {
@@ -646,7 +609,7 @@ class OnkyoAccessory {
 		callback(null, this.v_state);
 		if (volumeDirection === Characteristic.VolumeSelector.INCREMENT) {
 			this.log.debug('setVolumeRelative - VOLUME : level-up');
-			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':level-up', (error, response) => {
+			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':level-up', (error, _) => {
 				if (error) {
 					this.v_state = 0;
 					this.log.error('setVolumeRelative - VOLUME : ERROR - current v_state: %s', this.v_state);
@@ -654,7 +617,7 @@ class OnkyoAccessory {
 			});
 		} else if (volumeDirection === Characteristic.VolumeSelector.DECREMENT) {
 			this.log.debug('setVolumeRelative - VOLUME : level-down');
-			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':level-down', (error, response) => {
+			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].volume + ':level-down', (error, _) => {
 				if (error) {
 					this.v_state = 0;
 					this.log.error('setVolumeRelative - VOLUME : ERROR - current v_state: %s', this.v_state);
@@ -663,6 +626,10 @@ class OnkyoAccessory {
 		} else {
 			this.log.error('setVolumeRelative - VOLUME : ERROR - unknown direction sent');
 		}
+
+		// Communicate status
+		if (this.tvService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Volume).updateValue(this.v_state);
 	}
 
 	getMuteState(callback, context) {
@@ -685,12 +652,16 @@ class OnkyoAccessory {
 		// have the event later on execute changes
 		callback(null, this.m_state);
 		this.log.debug('getMuteState - actual mode, return m_state: ', this.m_state);
-		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].muting + '=query', (error, data) => {
+		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].muting + '=query', (error, _) => {
 			if (error) {
 				this.m_state = false;
 				this.log.debug('getMuteState - MUTE QRY: ERROR - current m_state: %s', this.m_state);
 			}
 		});
+
+		// Communicate status
+		if (this.tvService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Mute).updateValue(this.m_state);
 	}
 
 	setMuteState(muteOn, callback, context) {
@@ -715,7 +686,7 @@ class OnkyoAccessory {
 		callback(null, this.m_state);
 		if (this.m_state) {
 			this.log.debug('setMuteState - actual mode, mute m_state: %s, switching to ON', this.m_state);
-			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].muting + '=on', (error, response) => {
+			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].muting + '=on', (error, _) => {
 				if (error) {
 					this.m_state = false;
 					this.log.error('setMuteState - MUTE ON: ERROR - current m_state: %s', this.m_state);
@@ -723,24 +694,28 @@ class OnkyoAccessory {
 			});
 		} else {
 			this.log.debug('setMuteState - actual mode, mute m_state: %s, switching to OFF', this.m_state);
-			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].muting + '=off', (error, response) => {
+			this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].muting + '=off', (error, _) => {
 				if (error) {
 					this.m_state = false;
 					this.log.error('setMuteState - MUTE OFF: ERROR - current m_state: %s', this.m_state);
 				}
 			});
 		}
+
+		// Communicate status
+		if (this.tvService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Mute).updateValue(this.m_state);
 	}
 
 	getInputSource(callback, context) {
 		// if context is i_statuspoll, then we need to request the actual value
-		// if (!context || context != 'i_statuspoll') {
-		// 	if (this.switchHandling == 'poll') {
-		// 		this.log.debug('getInputState - polling mode, return i_state: ', this.i_state);
-		// 		callback(null, this.i_state);
-		// 		return;
-		// 	}
-		// }
+		if (!context || context !== 'i_statuspoll') {
+			if (this.switchHandling === 'poll') {
+				this.log.debug('getInputState - polling mode, return i_state: ', this.i_state);
+				callback(null, this.i_state);
+				return;
+			}
+		}
 
 		if (!this.ip_address) {
 			this.log.error('Ignoring request; No ip_address defined.');
@@ -752,23 +727,26 @@ class OnkyoAccessory {
 		// have the event later on execute changes
 
 		this.log.debug('getInputState - actual mode, return i_state: ', this.i_state);
-		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].input + '=query', (error, data) => {
+		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].input + '=query', (error, _) => {
 			if (error) {
 				this.i_state = 1;
 				this.log.error('getInputState - INPUT QRY: ERROR - current i_state: %s', this.i_state);
 			}
 		});
 		callback(null, this.i_state);
-		// this.tvService.getCharacteristic(Characteristic.ActiveIdentifier).updateValue(this.i_state);
+		// Communicate status
+		if (this.tvService)
+			this.tvService.getCharacteristic(Characteristic.ActiveIdentifier).updateValue(this.i_state);
 	}
 
 	setInputSource(source, callback, context) {
 	// if context is i_statuspoll, then we need to ensure this we do not set the actual value
-		// if (context && context == 'i_statuspoll') {
-		// 	this.log.info( 'setInputState - polling mode, ignore, i_state: %s', this.i_state);
-		// 	callback(null, this.i_state);
-		// 	return;
-		// }
+		if (context && context === 'i_statuspoll') {
+			this.log.info('setInputState - polling mode, ignore, i_state: %s', this.i_state);
+			callback(null, this.i_state);
+			return;
+		}
+
 		if (!this.ip_address) {
 			this.log.error('Ignoring request; No ip_address defined.');
 			callback(new Error('No ip_address defined.'));
@@ -785,10 +763,14 @@ class OnkyoAccessory {
 		// do the callback immediately, to free homekit
 		// have the event later on execute changes
 		callback(null, this.i_state);
-		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].input + ':' + label, (error, response) => {
+		this.eiscp.command(this.zone + '.' + this.cmdMap[this.zone].input + ':' + label, (error, _) => {
 			if (error)
 				this.log.error('setInputState - INPUT : ERROR - current i_state:%s - Source:%s', this.i_state, source.toString());
 		});
+
+		// Communicate status
+		if (this.tvService)
+			this.tvService.getCharacteristic(Characteristic.ActiveIdentifier).updateValue(this.i_state);
 	}
 
 	remoteKeyPress(button, callback) {
@@ -798,7 +780,7 @@ class OnkyoAccessory {
 		if (this.buttons[button]) {
 			const press = this.buttons[button];
 			this.log.debug('remoteKeyPress - INPUT: pressing key %s', press);
-			this.eiscp.command(this.zone + '.setup=' + press, (error, data) => {
+			this.eiscp.command(this.zone + '.setup=' + press, (error, _) => {
 				if (error) {
 					// this.i_state = 1;
 					this.log.error('remoteKeyPress - INPUT: ERROR pressing button %s', press);
@@ -814,40 +796,33 @@ class OnkyoAccessory {
 		callback(); // success
 	}
 
-/*
-	////////////////////////
+	/// /////////////////////
 	// TV SERVICE FUNCTIONS
-	////////////////////////
-*/
+	/// /////////////////////
 	addSources(service) {
 		// If input name mappings are provided, use them.
 		// Option to only configure specified inputs with filter_inputs
 		if (this.filter_inputs) {
-			let length = RxInputs.Inputs.length;
-			while (length--) {
-				if (this.inputs[RxInputs.Inputs[length].label])
-					continue;
-					else
-					RxInputs.Inputs.splice(length, 1);
-			}
+			// Check the RxInputs.Inputs items to see if each exists in this.inputs. Return new array of those that do.
+			RxInputs.Inputs = RxInputs.Inputs.filter(rxinput => {
+				return this.inputs.some(input => {
+					return input.input_name === rxinput.label;
+				});
+			});
 		}
 
 		this.log.debug(RxInputs.Inputs);
+		// Create final array of inputs, using any labels defined in the config's inputs to override the default labels
 		const inputs = RxInputs.Inputs.map((i, index) => {
 			const hapId = index + 1;
 			let inputName = i.label;
 			if (this.inputs) {
-				if (this.inputs[i.label])
-					inputName = this.inputs[i.label];
+				this.inputs.forEach((input, _) => {
+					if (input.input_name === i.label)
+						inputName = input.display_name;
+				});
 			}
-			// var dupe = false;
-			// inputs.forEach((y, z) => {
-			// 	if (y['subtype'] == i['code']) {
-			// 		dupe = true;
-			// 	}
-			// })
 
-			// if (dupe) return
 			const input = this.setupInput(i.code, inputName, hapId, service);
 			return input;
 		});
