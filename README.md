@@ -1,6 +1,6 @@
 # homebridge-onkyo
 [![npm](https://img.shields.io/npm/dt/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
-[![npm](https://img.shields.io/npm/l/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
+[![npm](https://img.shields.io/npm/l/homebridge-onkyo.svg)](https://github.com/ToddGreenfield/homebridge-onkyo/blob/master/LICENSE)
 
 [![NPM Version](https://img.shields.io/npm/v/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
 ![Node.js CI](https://github.com/ToddGreenfield/homebridge-onkyo/workflows/Node.js%20CI/badge.svg?branch=master)
