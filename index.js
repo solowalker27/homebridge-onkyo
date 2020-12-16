@@ -5,7 +5,6 @@ let Characteristic;
 let RxInputs;
 const pollingtoevent = require('polling-to-event');
 const info = require('./package.json');
-const eiscp = require('eiscp');
 
 class OnkyoPlatform {
 	constructor(log, config, api) {
@@ -26,13 +25,14 @@ class OnkyoPlatform {
 
 	createAccessories(platform, receivers) {
 		platform.numberReceivers = platform.receivers.length;
-		platform.log.info('Creating %s receivers...', platform.numberReceivers);
+		platform.log.debug('Creating %s receivers...', platform.numberReceivers);
 		if (platform.numberReceivers === 0) return;
 		receivers.forEach(receiver => {
-			if(!this.connections[receiver.ip_address])
+			if(!platform.connections[receiver.ip_address])
 			{
-				platform.log.info('Creating new connection for ip %s' , receiver.ip_address);
-				this.connections[receiver.ip_address] = eiscp.connect({host:receiver.ip_address, reconnect:true,model:receiver.model});
+				platform.log.debug('Creating new connection for ip %s' , receiver.ip_address);
+				platform.connections[receiver.ip_address] = require('eiscp');
+				platform.connections[receiver.ip_address].connect({host:receiver.ip_address, reconnect:true,model:receiver.model})
 
 			}
 			const accessory = new OnkyoAccessory(platform, receiver);
@@ -150,7 +150,6 @@ class OnkyoAccessory {
 			this.eiscp.on(this.cmdMap[this.zone].muting, this.eventAudioMuting.bind(this));
 			this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
 		}
-
 			this.setUp();
 
 	}
@@ -315,7 +314,7 @@ class OnkyoAccessory {
 	}
 
 	eventConnect(response) {
-		this.log.info('eventConnect: %s', response);
+		this.log.debug('eventConnect: %s', response);
 		this.reachable = true;
 	}
 
