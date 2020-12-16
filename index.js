@@ -5,6 +5,7 @@ let Characteristic;
 let RxInputs;
 const pollingtoevent = require('polling-to-event');
 const info = require('./package.json');
+const eiscp = require('eiscp');
 
 class OnkyoPlatform {
 	constructor(log, config, api) {
@@ -31,8 +32,7 @@ class OnkyoPlatform {
 			if(!this.connections[receiver.ip_address])
 			{
 				platform.log.info('Creating new connection for ip %s' , receiver.ip_address);
-				this.connections[receiver.ip_address] = require('eiscp');
-				this.connections[receiver.ip_address].connect({host:receiver.ip_address, reconnect:true,model:receiver.model})
+				this.connections[receiver.ip_address] = eiscp.connect({host:receiver.ip_address, reconnect:true,model:receiver.model});
 
 			}
 			const accessory = new OnkyoAccessory(platform, receiver);
