@@ -30,7 +30,7 @@ class OnkyoPlatform {
 		receivers.forEach(receiver => {
 			if(!connections[receiver.ip_address])
 			{
-				this.log.debug('Creating new connection for ip' = receiver.ip_address);
+				platform.log.debug('Creating new connection for ip %s' , receiver.ip_address);
 				connections[receiver.ip_address] = require('eiscp');
 				connections[receiver.ip_address].connect({host:receiver.ip_address, reconnect:true,model:receiver.model})
 
