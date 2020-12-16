@@ -25,7 +25,7 @@ class OnkyoPlatform {
 
 	createAccessories(platform, receivers) {
 		platform.numberReceivers = platform.receivers.length;
-		platform.log.debug('Creating %s receivers...', platform.numberReceivers);
+		platform.log.info('Creating %s receivers...', platform.numberReceivers);
 		if (platform.numberReceivers === 0) return;
 		receivers.forEach(receiver => {
 			if(!this.connections[receiver.ip_address])
