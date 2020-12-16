@@ -13,7 +13,7 @@ class OnkyoPlatform {
 		this.log = log;
 		this.receivers = this.config.receivers;
 		this.receiverAccessories = [];
-		this.connections = [];
+		this.connections = {};
 
 		if (this.receivers === undefined) {
 			this.log.error('ERROR: your configuration is incorrect. Configuration changed with version 0.7.x');
