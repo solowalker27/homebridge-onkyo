@@ -13,6 +13,7 @@ class OnkyoPlatform {
 		this.log = log;
 		this.receivers = this.config.receivers;
 		this.receiverAccessories = [];
+		this.connections = {};
 
 		if (this.receivers === undefined) {
 			this.log.error('ERROR: your configuration is incorrect. Configuration changed with version 0.7.x');
@@ -27,6 +28,13 @@ class OnkyoPlatform {
 		platform.log.debug('Creating %s receivers...', platform.numberReceivers);
 		if (platform.numberReceivers === 0) return;
 		receivers.forEach(receiver => {
+			if(!this.connections[receiver.ip_address])
+			{
+				platform.log.debug('Creating new connection for ip %s' , receiver.ip_address);
+				this.connections[receiver.ip_address] = require('eiscp');
+				this.connections[receiver.ip_address].connect({host:receiver.ip_address, reconnect:true,model:receiver.model})
+
+			}
 			const accessory = new OnkyoAccessory(platform, receiver);
 			platform.receiverAccessories.push(accessory);
 			});
@@ -49,7 +57,7 @@ class OnkyoAccessory {
 		this.log.info('start success...');
 		this.log.debug('Debug mode enabled');
 
-		this.eiscp = require('eiscp');
+		this.eiscp = platform.connections[receiver.ip_address];
 		this.setAttempt = 0;
 		this.enabledServices = [];
 
@@ -60,7 +68,7 @@ class OnkyoAccessory {
 		this.log.debug('IP %s', this.ip_address);
 		this.model = this.config.model;
 		this.log.debug('Model %s', this.model);
-		this.zone = this.config.zone || 'main';
+		this.zone = this.config.zone.toLowerCase() || 'main';
 		this.log.debug('Zone %s', this.zone);
 
 		if (this.config.volume_dimmer === undefined) {
@@ -141,11 +149,8 @@ class OnkyoAccessory {
 		this.eiscp.on(this.cmdMap[this.zone].muting, this.eventAudioMuting.bind(this));
 		this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
 
-		this.eiscp.connect(
-			{host: this.ip_address, reconnect: true, model: this.model}
-		);
-
 		this.setUp();
+
 	}
 
 	setUp() {
