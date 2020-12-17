@@ -59,7 +59,7 @@ class OnkyoAccessory {
 		this.log.debug('Debug mode enabled');
 		this.log.info(platform.connections);
 
-		this.eiscp = platform.connections[this.ip_address];
+		this.eiscp = platform.connections[receiver.ip_address];
 		this.setAttempt = 0;
 		this.enabledServices = [];
 
