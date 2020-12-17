@@ -140,7 +140,6 @@ class OnkyoAccessory {
 		if (this.interval > 10 && this.interval < 100000)
 			this.switchHandling = 'poll';
 
-		if (this.eiscp){
 			this.eiscp.on('debug', this.eventDebug.bind(this));
 			this.eiscp.on('error', this.eventError.bind(this));
 			this.eiscp.on('connect', this.eventConnect.bind(this));
@@ -149,7 +148,7 @@ class OnkyoAccessory {
 			this.eiscp.on(this.cmdMap[this.zone].volume, this.eventVolume.bind(this));
 			this.eiscp.on(this.cmdMap[this.zone].muting, this.eventAudioMuting.bind(this));
 			this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
-		}
+			
 			this.setUp();
 
 	}
