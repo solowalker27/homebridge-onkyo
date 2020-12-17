@@ -195,7 +195,7 @@ class OnkyoAccessory {
 			let hold = eiscpData[exkey].name.toString();
 			if (hold.includes(','))
 				hold = hold.substring(0, hold.indexOf(','));
-			if (exkey.includes('“') || exkey.includes('“')) {
+			if (exkey.includes('“') || exkey.includes('”')) {
 				exkey = exkey.replace(/\“/g, ''); // eslint-disable-line no-useless-escape
 				exkey = exkey.replace(/\”/g, ''); // eslint-disable-line no-useless-escape
 			}
