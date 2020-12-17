@@ -38,6 +38,7 @@ class OnkyoPlatform {
 			const accessory = new OnkyoAccessory(platform, receiver);
 			platform.receiverAccessories.push(accessory);
 			});
+		this.log.info(platform.connections);
 	}
 
 	accessories(callback) {
@@ -56,6 +57,7 @@ class OnkyoAccessory {
 		this.log.info('**************************************************************');
 		this.log.info('start success...');
 		this.log.debug('Debug mode enabled');
+		this.log.info(platform.connections);
 
 		this.eiscp = platform.connections[this.ip_address];
 		this.setAttempt = 0;
@@ -148,7 +150,7 @@ class OnkyoAccessory {
 			this.eiscp.on(this.cmdMap[this.zone].volume, this.eventVolume.bind(this));
 			this.eiscp.on(this.cmdMap[this.zone].muting, this.eventAudioMuting.bind(this));
 			this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
-			
+
 			this.setUp();
 
 	}
