@@ -67,7 +67,7 @@ class OnkyoAccessory {
 		this.log.debug('IP %s', this.ip_address);
 		this.model = this.config.model;
 		this.log.debug('Model %s', this.model);
-		this.zone = this.config.zone.toLowerCase() || 'main';
+		this.zone = (this.config.zone || 'main').toLowerCase();
 		this.log.debug('Zone %s', this.zone);
 
 		if (this.config.volume_dimmer === undefined) {
