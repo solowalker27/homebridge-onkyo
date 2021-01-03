@@ -194,8 +194,8 @@ class OnkyoAccessory {
 			if (hold.includes(','))
 				hold = hold.slice(0, hold.indexOf(','));
 			if (exkey.includes('“') || exkey.includes('”')) {
-				exkey = exkey.replace(/\“/g, ''); // eslint-disable-line no-useless-escape
-				exkey = exkey.replace(/\”/g, ''); // eslint-disable-line no-useless-escape
+				exkey = exkey.replace(/“/g, '');
+				exkey = exkey.replace(/”/g, '');
 			}
 
 			if (exkey.includes('UP') || exkey.includes('DOWN') || exkey.includes('QSTN'))
@@ -341,7 +341,7 @@ class OnkyoAccessory {
 	eventInput(response) {
 		if (response) {
 			let input = JSON.stringify(response);
-			input = input.replace(/[\[\]"]+/g, ''); // eslint-disable-line no-useless-escape
+			input = input.replace(/[[\]"]+/g, '');
 			if (input.includes(','))
 				input = input.slice(0, input.indexOf(','));
 
