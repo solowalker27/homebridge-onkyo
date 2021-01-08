@@ -131,7 +131,7 @@ class OnkyoAccessory {
 		this.m_state = false;
 		this.v_state = 0;
 		this.i_state = null;
-		this.interval = parseInt(this.poll_status_interval, 10);
+		this.interval = this.poll_status_interval.parseInt(10);
 		this.avrManufacturer = 'Onkyo';
 		this.avrSerial = this.config.serial || this.ip_address;
 		this.log.debug('avrSerial: %s', this.avrSerial);
@@ -192,10 +192,10 @@ class OnkyoAccessory {
 		for (exkey in eiscpData) {
 			let hold = eiscpData[exkey].name.toString();
 			if (hold.includes(','))
-				hold = hold.substring(0, hold.indexOf(','));
-			if (exkey.includes('“') || exkey.includes('“')) {
-				exkey = exkey.replace(/\“/g, ''); // eslint-disable-line no-useless-escape
-				exkey = exkey.replace(/\”/g, ''); // eslint-disable-line no-useless-escape
+				hold = hold.slice(0, hold.indexOf(','));
+			if (exkey.includes('“') || exkey.includes('”')) {
+				exkey = exkey.replace(/“/g, '');
+				exkey = exkey.replace(/”/g, '');
 			}
 
 			if (exkey.includes('UP') || exkey.includes('DOWN') || exkey.includes('QSTN'))
@@ -341,9 +341,9 @@ class OnkyoAccessory {
 	eventInput(response) {
 		if (response) {
 			let input = JSON.stringify(response);
-			input = input.replace(/[\[\]"]+/g, ''); // eslint-disable-line no-useless-escape
+			input = input.replace(/[[\]"]+/g, '');
 			if (input.includes(','))
-				input = input.substring(0, input.indexOf(','));
+				input = input.slice(0, input.indexOf(','));
 
 			// Convert to i_state input code
 			const index =
@@ -405,7 +405,7 @@ class OnkyoAccessory {
 			return;
 		}
 
-		this.setAttempt = this.setAttempt + 1;
+		this.setAttempt++;
 
 		// do the callback immediately, to free homekit
 		// have the event later on execute changes
@@ -484,12 +484,10 @@ class OnkyoAccessory {
 
 	getPowerState(callback, context) {
 		// if context is statuspoll, then we need to request the actual value
-		if (!context || context !== 'statuspoll') {
-			if (this.switchHandling === 'poll') {
+		if ((!context || context !== 'statuspoll') && this.switchHandling === 'poll') {
 				this.log.debug('getPowerState - polling mode, return state: ', this.state);
 				callback(null, this.state);
 				return;
-			}
 		}
 
 		if (!this.ip_address) {
@@ -513,12 +511,10 @@ class OnkyoAccessory {
 
 	getVolumeState(callback, context) {
 		// if context is v_statuspoll, then we need to request the actual value
-		if (!context || context !== 'v_statuspoll') {
-			if (this.switchHandling === 'poll') {
+		if ((!context || context !== 'v_statuspoll') && this.switchHandling === 'poll') {
 				this.log.debug('getVolumeState - polling mode, return v_state: ', this.v_state);
 				callback(null, this.v_state);
 				return;
-			}
 		}
 
 		if (!this.ip_address) {
@@ -557,7 +553,7 @@ class OnkyoAccessory {
 			return;
 		}
 
-		this.setAttempt = this.setAttempt + 1;
+		this.setAttempt++;
 
 		// Are we mapping volume to 100%?
 		if (this.mapVolume100) {
@@ -605,7 +601,7 @@ class OnkyoAccessory {
 			return;
 		}
 
-		this.setAttempt = this.setAttempt + 1;
+		this.setAttempt++;
 
 		// do the callback immediately, to free homekit
 		// have the event later on execute changes
@@ -637,12 +633,10 @@ class OnkyoAccessory {
 
 	getMuteState(callback, context) {
 		// if context is m_statuspoll, then we need to request the actual value
-		if (!context || context !== 'm_statuspoll') {
-			if (this.switchHandling === 'poll') {
+		if ((!context || context !== 'm_statuspoll') && this.switchHandling === 'poll') {
 				this.log.debug('getMuteState - polling mode, return m_state: ', this.m_state);
 				callback(null, this.m_state);
 				return;
-			}
 		}
 
 		if (!this.ip_address) {
@@ -681,7 +675,7 @@ class OnkyoAccessory {
 			return;
 		}
 
-		this.setAttempt = this.setAttempt + 1;
+		this.setAttempt++;
 
 		// do the callback immediately, to free homekit
 		// have the event later on execute changes
@@ -712,12 +706,10 @@ class OnkyoAccessory {
 
 	getInputSource(callback, context) {
 		// if context is i_statuspoll, then we need to request the actual value
-		if (!context || context !== 'i_statuspoll') {
-			if (this.switchHandling === 'poll') {
+		if ((!context || context !== 'i_statuspoll') && this.switchHandling === 'poll') {
 				this.log.debug('getInputState - polling mode, return i_state: ', this.i_state);
 				callback(null, this.i_state);
 				return;
-			}
 		}
 
 		if (!this.ip_address) {
@@ -756,7 +748,7 @@ class OnkyoAccessory {
 			return;
 		}
 
-		this.setAttempt = this.setAttempt + 1;
+		this.setAttempt++;
 
 		this.i_state = source;
 		const label = RxInputs.Inputs[this.i_state - 1].label;
