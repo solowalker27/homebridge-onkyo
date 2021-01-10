@@ -131,7 +131,7 @@ class OnkyoAccessory {
 		this.m_state = false;
 		this.v_state = 0;
 		this.i_state = null;
-		this.interval = this.poll_status_interval.parseInt(10);
+		this.interval = Number.parseInt(this.poll_status_interval, 10);
 		this.avrManufacturer = 'Onkyo';
 		this.avrSerial = this.config.serial || this.ip_address;
 		this.log.debug('avrSerial: %s', this.avrSerial);
@@ -863,9 +863,9 @@ class OnkyoAccessory {
 			.getCharacteristic(Characteristic.On)
 			// Inverted logic taken from https://github.com/langovoi/homebridge-upnp
 			.on('get', callback => {
-				this.getMuteState((err, value) => {
-					if (err) {
-						callback(err);
+				this.getMuteState((error, value) => {
+					if (error) {
+						callback(error);
 						return;
 					}
 
