@@ -35,13 +35,13 @@ class OnkyoPlatform {
 			}
 
 			const accessory = new OnkyoAccessory(platform, receiver);
-			platform.receiverAccessories.push(accessory);
+			// platform.receiverAccessories.push(accessory);
 			});
 	}
 
-	accessories(callback) {
-		callback(this.receiverAccessories);
-	}
+	// accessories(callback) {
+	// 	callback(this.receiverAccessories);
+	// }
 }
 
 class OnkyoAccessory {
@@ -58,7 +58,7 @@ class OnkyoAccessory {
 
 		this.eiscp = platform.connections[receiver.ip_address];
 		this.setAttempt = 0;
-		this.enabledServices = [];
+		// this.enabledServices = [];
 
 		this.config = receiver;
 		this.name = this.config.name;
@@ -155,21 +155,26 @@ class OnkyoAccessory {
 		this.createRxInput();
 		this.polling(this);
 
-		const infoService = this.createAccessoryInformationService();
-		this.enabledServices.push(infoService);
-		this.tvService = this.createTvService();
-		this.enabledServices.push(this.tvService);
+		this.UUID = this.platform.api.hap.uuid.generate('homebridge:homebridge-onkyo' + this.name);
+		this.accessory = new this.platform.api.platformAccessory(this.name, this.UUID, this.platform.api.hap.Accessory.Categories.AUDIO_RECEIVER)
+
+		const infoService = this.createAccessoryInformationService(this.accessory);
+		// this.enabledServices.push(infoService);
+		this.tvService = this.createTvService(this.accessory);
+		// this.enabledServices.push(this.tvService);
 		this.createTvSpeakerService(this.tvService);
-		this.enabledServices.push(...this.addSources(this.tvService));
+		this.addSources(this.tvService);
+		// this.enabledServices.push(...this.addSources(this.tvService));
 		if (this.volume_dimmer) {
 			this.log.debug('Creating Dimmer service linked to TV for receiver %s', this.name);
 			this.createVolumeDimmer(this.tvService);
 		}
+		this.platform.api.publishExternalAccessories('homebridge-onkyo', [this.accessory])
 	}
 
-	getServices() {
-		return this.enabledServices;
-	}
+	// getServices() {
+	// 	return this.enabledServices;
+	// }
 
 	createRxInput() {
 	// Create the RxInput object for later use.
@@ -825,7 +830,7 @@ class OnkyoAccessory {
 	}
 
 	setupInput(inputCode, name, hapId, television) {
-		const input = new Service.InputSource(`${this.name} ${name}`, inputCode);
+		const input = this.accessory.addService(Service.InputSource, `${this.name} ${name}`, inputCode);
 		const inputSourceType = Characteristic.InputSourceType.HDMI;
 
 		input
@@ -845,8 +850,11 @@ class OnkyoAccessory {
 		return input;
 	}
 
-	createAccessoryInformationService() {
-		const informationService = new Service.AccessoryInformation();
+	createAccessoryInformationService(accessory) {
+		const informationService = accessory.getService(Service.AccessoryInformation);
+		if (!informationService) {
+			informationService = accessory.addService(Service.AccessoryInformation);
+		}
 		informationService
 			.setCharacteristic(Characteristic.Manufacturer, this.avrManufacturer)
 			.setCharacteristic(Characteristic.Model, this.model)
@@ -858,7 +866,7 @@ class OnkyoAccessory {
 	}
 
 	createVolumeDimmer(service) {
-		this.dimmer = new Service.Lightbulb(this.name + ' Volume', 'dimmer');
+		this.dimmer = this.accessory.addService(Service.Lightbulb, this.name + ' Volume', 'dimmer');
 		this.dimmer
 			.getCharacteristic(Characteristic.On)
 			// Inverted logic taken from https://github.com/langovoi/homebridge-upnp
@@ -879,12 +887,12 @@ class OnkyoAccessory {
 			.on('set', this.setVolumeState.bind(this));
 
 		service.addLinkedService(this.dimmer);
-		this.enabledServices.push(this.dimmer);
+		// this.enabledServices.push(this.dimmer);
 	}
 
-	createTvService() {
+	createTvService(accessory) {
 		this.log.debug('Creating TV service for receiver %s', this.name);
-		const tvService = new Service.Television(this.name);
+		const tvService = accessory.addService(Service.Television, this.name);
 
 		tvService
 			.getCharacteristic(Characteristic.ConfiguredName)
@@ -914,7 +922,7 @@ class OnkyoAccessory {
 	}
 
 	createTvSpeakerService(tvService) {
-		this.tvSpeakerService = new Service.TelevisionSpeaker(this.name + ' Volume', 'tvSpeakerService');
+		this.tvSpeakerService = this.accessory.addService(Service.TelevisionSpeaker, this.name + ' Volume', 'tvSpeakerService');
 		this.tvSpeakerService
 			.setCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE)
 			.setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.ABSOLUTE);
@@ -931,7 +939,7 @@ class OnkyoAccessory {
 			.on('set', this.setVolumeState.bind(this));
 
 		tvService.addLinkedService(this.tvSpeakerService);
-		this.enabledServices.push(this.tvSpeakerService);
+		// this.enabledServices.push(this.tvSpeakerService);
 	}
 }
 
