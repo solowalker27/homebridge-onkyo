@@ -34,14 +34,9 @@ class OnkyoPlatform {
 				this.connections[receiver.ip_address].connect({host: receiver.ip_address, reconnect: true, model: receiver.model});
 			}
 
-			const accessory = new OnkyoAccessory(platform, receiver);
-			// platform.receiverAccessories.push(accessory);
+			const accessory = new OnkyoAccessory(platform, receiver); // eslint-disable-line no-unused-vars
 			});
 	}
-
-	// accessories(callback) {
-	// 	callback(this.receiverAccessories);
-	// }
 }
 
 class OnkyoAccessory {
@@ -58,7 +53,6 @@ class OnkyoAccessory {
 
 		this.eiscp = platform.connections[receiver.ip_address];
 		this.setAttempt = 0;
-		// this.enabledServices = [];
 
 		this.config = receiver;
 		this.name = this.config.name;
@@ -156,25 +150,19 @@ class OnkyoAccessory {
 		this.polling(this);
 
 		this.UUID = this.platform.api.hap.uuid.generate('homebridge:homebridge-onkyo' + this.name);
-		this.accessory = new this.platform.api.platformAccessory(this.name, this.UUID, this.platform.api.hap.Accessory.Categories.AUDIO_RECEIVER)
+		this.accessory = new this.platform.api.platformAccessory(this.name, this.UUID, this.platform.api.hap.Accessory.Categories.AUDIO_RECEIVER); // eslint-disable-line new-cap
 
-		const infoService = this.createAccessoryInformationService(this.accessory);
-		// this.enabledServices.push(infoService);
+		this.createAccessoryInformationService(this.accessory);
 		this.tvService = this.createTvService(this.accessory);
-		// this.enabledServices.push(this.tvService);
 		this.createTvSpeakerService(this.tvService);
 		this.addSources(this.tvService);
-		// this.enabledServices.push(...this.addSources(this.tvService));
 		if (this.volume_dimmer) {
 			this.log.debug('Creating Dimmer service linked to TV for receiver %s', this.name);
 			this.createVolumeDimmer(this.tvService);
 		}
-		this.platform.api.publishExternalAccessories('homebridge-onkyo', [this.accessory])
-	}
 
-	// getServices() {
-	// 	return this.enabledServices;
-	// }
+		this.platform.api.publishExternalAccessories('homebridge-onkyo', [this.accessory]);
+	}
 
 	createRxInput() {
 	// Create the RxInput object for later use.
@@ -851,10 +839,10 @@ class OnkyoAccessory {
 	}
 
 	createAccessoryInformationService(accessory) {
-		const informationService = accessory.getService(Service.AccessoryInformation);
-		if (!informationService) {
+		let informationService = accessory.getService(Service.AccessoryInformation);
+		if (!informationService)
 			informationService = accessory.addService(Service.AccessoryInformation);
-		}
+
 		informationService
 			.setCharacteristic(Characteristic.Manufacturer, this.avrManufacturer)
 			.setCharacteristic(Characteristic.Model, this.model)
@@ -887,7 +875,6 @@ class OnkyoAccessory {
 			.on('set', this.setVolumeState.bind(this));
 
 		service.addLinkedService(this.dimmer);
-		// this.enabledServices.push(this.dimmer);
 	}
 
 	createTvService(accessory) {
@@ -939,7 +926,6 @@ class OnkyoAccessory {
 			.on('set', this.setVolumeState.bind(this));
 
 		tvService.addLinkedService(this.tvSpeakerService);
-		// this.enabledServices.push(this.tvSpeakerService);
 	}
 }
 
